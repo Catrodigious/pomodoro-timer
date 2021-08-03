@@ -55,7 +55,6 @@ function Pomodoro() {
   // The current session - null where there is no session running
   const [session, setSession] = useState(null);
 
-  // ToDo: Allow the user to adjust the focus and break duration.
   const [focusDuration, setFocusDuration] = useState(25);
   const [breakDuration, setBreakDuration] = useState(5);
 
@@ -135,10 +134,8 @@ function Pomodoro() {
   function ClockData() {
     return (
       <div>
-        {/* TODO: This area should show only when there is an active focus or break - i.e. the session is running or is paused */}
         <div className="row mb-2">
           <div className="col">
-            {/* TODO: Update message below to include current session (Focusing or On Break) total duration */}
             <h2 data-testid="session-title">
               {session && session.label} for {getMinutes()} minutes
             </h2>
@@ -156,7 +153,7 @@ function Pomodoro() {
                 aria-valuemin="0"
                 aria-valuemax="100"
                 aria-valuenow={updateProgress()}
-                style={{ width: `${updateProgress()}%`}} // TODO: Increase width % as elapsed time increases
+                style={{ width: `${updateProgress()}%`}}
               />
             </div>
           </div>
