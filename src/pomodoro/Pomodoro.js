@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
-import classNames from "../utils/class-names";
+import React, { useState } from "react";
 import useInterval from "../utils/useInterval";
-import {minutesToDuration, secondsToDuration} from "../utils/duration";
+import { minutesToDuration, secondsToDuration } from "../utils/duration";
+import DurationControls from "./DurationControls";
+import TimerControls from "./TimerControls";
 
 // These functions are defined outside of the component to insure they do not have access to state
 // and are, therefore more likely to be pure.
@@ -53,7 +54,6 @@ function Pomodoro() {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   // The current session - null where there is no session running
   const [session, setSession] = useState(null);
-  const [progress, setProgress] = useState(0);
 
   // ToDo: Allow the user to adjust the focus and break duration.
   const [focusDuration, setFocusDuration] = useState(25);
@@ -61,29 +61,36 @@ function Pomodoro() {
 
   const focusDurationSec = focusDuration * 60;
   const breakDurationSec = breakDuration * 60;
-
-  useEffect(()=>{
-    if (isTimerRunning){
-      if (session.label === "Focusing"){
-        const pTime = Math.round((1-(session.timeRemaining/focusDurationSec)) * 100);
-        setProgress(pTime);
-      }else{
-        const pTime = Math.round((1-(session.timeRemaining/breakDurationSec)) * 100);
-        setProgress(pTime);
+ 
+  function updateProgress() {
+    if (isTimerRunning) {
+      if (session.label === "Focusing") {
+        const pTime = Math.round(
+          (1 - session.timeRemaining / focusDurationSec) * 100
+        );
+        return pTime;
+      } else if (session.label === "On Break") {
+        const pTime = Math.round(
+          (1 - session.timeRemaining / breakDurationSec) * 100
+        );
+        return pTime;
+      } else {
+        return 0;
       }
     }else{
-      setProgress(0);
+      return 0;
     }
-  }, [session]);
+  }
 
   /**
    * Custom hook that invokes the callback function every second
    *
    * NOTE: You will not need to make changes to the callback function
    */
-  useInterval(() => {
+  useInterval(
+    () => {
       if (session.timeRemaining === 0) {
-        // new Audio("https://bigsoundbank.com/UPLOAD/mp3/1482.mp3").play();
+        new Audio("https://bigsoundbank.com/UPLOAD/mp3/1482.mp3").play();
         return setSession(nextSession(focusDuration, breakDuration));
       }
       return setSession(nextTick);
@@ -98,7 +105,6 @@ function Pomodoro() {
     setIsTimerRunning((prevState) => {
       const nextState = !prevState;
       if (nextState) {
-
         setSession((prevStateSession) => {
           // If the timer is starting and the previous session is null,
           // start a focusing session.
@@ -115,212 +121,102 @@ function Pomodoro() {
     });
   }
 
-  function stopSession(){
+  function stopSession() {
     setIsTimerRunning(false);
     setSession(null);
   }
 
+  function getMinutes() {
+    return session.label === "Focusing"
+      ? minutesToDuration(focusDuration)
+      : minutesToDuration(breakDuration);
+  }
 
-  function ClockData(){
+  function ClockData() {
     return (
-        <div>
-          {/* TODO: This area should show only when there is an active focus or break - i.e. the session is running or is paused */}
-          <div className="row mb-2">
-            <div className="col">
-              {/* TODO: Update message below to include current session (Focusing or On Break) total duration */}
-              <h2 data-testid="session-title">
-                {session?.label} for {session.label === "Focusing" ? minutesToDuration(focusDuration) : minutesToDuration(breakDuration) } minutes
-              </h2>
-              {/* TODO: Update message below correctly format the time remaining in the current session */}
-              <p className="lead" data-testid="session-sub-title">
-                {secondsToDuration(session.timeRemaining)} remaining
-              </p>
-            </div>
+      <div>
+        {/* TODO: This area should show only when there is an active focus or break - i.e. the session is running or is paused */}
+        <div className="row mb-2">
+          <div className="col">
+            {/* TODO: Update message below to include current session (Focusing or On Break) total duration */}
+            <h2 data-testid="session-title">
+              {session && session.label} for {getMinutes()} minutes
+            </h2>
+            <p className="lead" data-testid="session-sub-title">
+              {secondsToDuration(session.timeRemaining)} remaining
+            </p>
           </div>
-          <div className="row mb-2">
-            <div className="col">
-              <div className="progress" style={{ height: "20px" }}>
-                <div
-                  className="progress-bar"
-                  role="progressbar"
-                  aria-valuemin="0"
-                  aria-valuemax="100"
-                  aria-valuenow={progress} // TODO: Increase aria-valuenow as elapsed time increases
-                  style={{ width: `${progress}%` }} // TODO: Increase width % as elapsed time increases
-                />
-              </div>
+        </div>
+        <div className="row mb-2">
+          <div className="col">
+            <div className="progress" style={{ height: "20px" }}>
+              <div
+                className="progress-bar"
+                role="progressbar"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow={updateProgress()}
+                style={{ width: `${updateProgress()}%`}} // TODO: Increase width % as elapsed time increases
+              />
             </div>
           </div>
         </div>
-    )
+      </div>
+    );
   }
 
-  function decreaseFocusTimer(){
-    if (focusDuration >= 10)
-      setFocusDuration(focusDuration - 5);
-  }
-
-  function increaseFocusTimer(){
-    if (focusDuration < 60)
-      setFocusDuration(focusDuration + 5);
-  }
-
-  function ShowFocusDuration(){
-    if (focusDuration < 10){
-      return (
-        <span className="input-group-text" data-testid="duration-focus">
-          {/* TODO: Update this text to display the current focus session duration */}
-          Focus Duration: 0{focusDuration}:00 min
-        </span>
-      )
-    }else{
-      if (focusDuration >= 10){
-        return (
-        <span className="input-group-text" data-testid="duration-focus">
-         {/* TODO: Update this text to display the current focus session duration */}
-          Focus Duration: {focusDuration}:00 min
-        </span>
-        )
-      }
+  function increaseTimer(timerType) {
+    if (timerType === "Focusing") {
+      if (focusDuration < 60) setFocusDuration(focusDuration + 5);
+    } else {
+      if (breakDuration < 15) setBreakDuration(breakDuration + 1);
     }
   }
 
-  function decreaseBreakTimer(){
-    if (breakDuration > 1){
-      setBreakDuration(breakDuration - 1);
+  function decreaseTimer(timerType) {
+    if (timerType === "Focusing") {
+      if (focusDuration >= 10) setFocusDuration(focusDuration - 5);
+    } else {
+      if (breakDuration > 1) setBreakDuration(breakDuration - 1);
     }
   }
-
-  function increaseBreakTimer(){
-    if (breakDuration < 15){
-      setBreakDuration(breakDuration + 1);
-    }
-  }
-
-  function ShowBreakDuration(){
-    // using Math.min/max in order to set the upper and lower bounds
-    // using if/else for the 0 before the time if time is less than 10
-    if (Math.min(breakDuration, 1) && Math.max(breakDuration, 15)){
-      if (breakDuration < 10){
-        return (
-          <span className="input-group-text" data-testid="duration-break">
-            {/* TODO: Update this text to display the current break session duration */}
-            Break Duration: 0{breakDuration}:00 min
-          </span>
-        )
-      }else{
-        return (
-          <span className="input-group-text" data-testid="duration-break">
-            {/* TODO: Update this text to display the current break session duration */}
-            Break Duration: {breakDuration}:00 min
-          </span>
-        )
-      }
-    }
-  }
-
 
   return (
     <div className="pomodoro">
       <div className="row">
         <div className="col">
-          <div className="input-group input-group-lg mb-2">
-            <ShowFocusDuration />
-            <div className="input-group-append">
-              {/* TODO: Implement decreasing focus duration and disable during a focus or break session */}
-              <button
-                type="button"
-                className="btn btn-secondary"
-                data-testid="decrease-focus"
-                onClick={decreaseFocusTimer}
-                disabled={session ? true: false}
-              >
-                <span className="oi oi-minus" />
-              </button>
-              {/* TODO: Implement increasing focus duration  and disable during a focus or break session */}
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  data-testid="increase-focus"
-                  onClick={increaseFocusTimer}
-                  disabled={session ? true: false}
-                >
-                  <span className="oi oi-plus" />
-                </button>
-            </div>
-          </div>
+          <DurationControls
+            type={"Focusing"}
+            session={session}
+            duration={focusDuration}
+            increaseTimer={increaseTimer}
+            decreaseTimer={decreaseTimer}
+          />
         </div>
         <div className="col">
           <div className="float-right">
-            <div className="input-group input-group-lg mb-2">
-              <ShowBreakDuration />
-              <div className="input-group-append">
-                {/* TODO: Implement decreasing break duration and disable during a focus or break session*/}
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  data-testid="decrease-break"
-                  onClick={decreaseBreakTimer}
-                  disabled={session ? true: false}
-                >
-                  <span className="oi oi-minus" />
-                </button>
-                {/* TODO: Implement increasing break duration and disable during a focus or break session*/}
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  data-testid="increase-break"
-                  onClick={increaseBreakTimer}
-                  disabled={session ? true: false}
-                >
-                  <span className="oi oi-plus" />
-                </button>
-              </div>
-            </div>
+            <DurationControls
+              type={"On Break"}
+              session={session}
+              duration={breakDuration}
+              increaseTimer={increaseTimer}
+              decreaseTimer={decreaseTimer}
+            />
           </div>
         </div>
       </div>
       <div className="row">
         <div className="col">
-          <div
-            className="btn-group btn-group-lg mb-2"
-            role="group"
-            aria-label="Timer controls"
-          >
-            <button
-              type="button"
-              className="btn btn-primary"
-              data-testid="play-pause"
-              title="Start or pause timer"
-              onClick={playPause}
-            >
-              <span
-                className={classNames({
-                  oi: true,
-                  "oi-media-play": !isTimerRunning,
-                  "oi-media-pause": isTimerRunning,
-                })}
-              />
-            </button>
-            {/* TODO: Implement stopping the current focus or break session. and disable the stop button when there is no active session */}
-            {/* TODO: Disable the stop button when there is no active session */}
-            <button
-              type="button"
-              className="btn btn-secondary"
-              data-testid="stop"
-              title="Stop the session"
-              onClick={stopSession}
-              disabled= {session ? false : true }
-            >
-              <span className="oi oi-media-stop" />
-            </button>
-          </div>
+          <TimerControls
+            session={session}
+            playPause={playPause}
+            isTimerRunning={isTimerRunning}
+            stopSession={stopSession}
+          />
         </div>
       </div>
-      { session &&
-        <ClockData />
-      }
-      </div>
+      {session && <ClockData />}
+    </div>
   );
 }
 
